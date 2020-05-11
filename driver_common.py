@@ -7,26 +7,23 @@ Description: 浏览器操作层
 Author: lhzhang.Lyon
 Date: '2018/6/5' '15:12'
 """
-import sys
-import os
-import time, json, requests
-from selenium import webdriver
+import json
 import logging
 import random
+import time
+
+import requests
+from selenium import webdriver
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
-import shutil
-import traceback
-
-
 logging.basicConfig(level=logging.INFO,
-                format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
-                datefmt='%a, %d %b %Y %H:%M:%S',
-                )
+                    format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+                    datefmt='%a, %d %b %Y %H:%M:%S',
+                    )
 
 
 class Chrome(object):
-    def __init__(self, policyid, headless = False):
+    def __init__(self, policyid, headless=False):
         self.Session = requests.session()
         self.policyid = policyid
         self.LOG = logging
@@ -35,8 +32,8 @@ class Chrome(object):
         self.chrome_path = None
         self.chrome_driver_path = None
         self.headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36',
-            'Connection': 'close'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                          'Chrome/74.0.3729.131 Safari/537.36 '
         }
 
     def copyChrome(self, name):
@@ -45,10 +42,10 @@ class Chrome(object):
         """
         pass
 
-    def get_url(self, url, last_url = None, stream = False, timeout = 100):
+    def get_url(self, url, last_url=None, stream=False, timeout=100):
         last_url = url
         self.headers['Referer'] = last_url
-        return self.Session.get(url = url, headers = self.headers, stream = stream, timeout = timeout, verify = False)
+        return self.Session.get(url=url, headers=self.headers, stream=stream, timeout=timeout, verify=False)
 
     def chrome_init(self):
         """
@@ -67,8 +64,8 @@ class Chrome(object):
             driver.implicitly_wait(30)
             driver.set_page_load_timeout(100)
             return driver
-        except:
-            self.LOG.error("chrome list driver init fail！")
+        except Exception as e:
+            self.LOG.error('chrome list driver init fail: {}'.format(e))
             return None
 
     def getHttpStatus(self, browser):
@@ -111,7 +108,7 @@ class Chrome(object):
 
 
 # 类接口
-def chrome_option(policy, headlsee = False):
+def chrome_option(policy, headlsee=False):
     return Chrome(policy, headlsee)
 
 
@@ -121,4 +118,3 @@ if __name__ == '__main__':
     chromedriver.open_url("http://www.npc.gov.cn/", test_driver)
     print(test_driver.title)
     chromedriver.chrome_quit(test_driver)
-

@@ -8,20 +8,21 @@ Author: lhzhang.Lyon
 Date: '2018/6/5' '16:12'
 """
 
-import sys
 import logging
-import Levenshtein
-from driver_common import chrome_option
-from lxml import etree
-from itertools import combinations
+import random
 import re
+import time
 import traceback
-from selenium.webdriver.support import expected_conditions as EC
+from itertools import combinations
+
+from lxml import etree
+
+from driver_common import chrome_option
 
 logging.basicConfig(level=logging.INFO,
-                format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
-                datefmt='%a, %d %b %Y %H:%M:%S',
-                )
+                    format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+                    datefmt='%a, %d %b %Y %H:%M:%S',
+                    )
 
 
 # 判断是否频道页
@@ -29,7 +30,7 @@ class ChannelJudge(object):
     def __init__(self, driver, policyid):
         """
         初始化操作，详细见注释
-        """        
+        """
         # 浏览器大小控制
         ### NOTE: 某些阿里云最大宽度只能设置到1024 高度768
         self.__driverWidth = 1500
@@ -40,11 +41,10 @@ class ChannelJudge(object):
         self.__minElesInList = 3
 
         # 一些阈值设置(可自行修改)
-        self.__linkTextDensity = 0.06 # 链接文本占父节点总文本的比重
-        self.__mianViewRange_more_x = [2/8.0, 6/8.0] # 链接 “更多” 出现在xzhou这个范围内被认为中央区域寒含有更多
-        self.__standardTitleLength = 12 # 标准标题长度
-        self.__standardTitleDensity = 0.2 # 标准标题密度
-
+        self.__linkTextDensity = 0.06  # 链接文本占父节点总文本的比重
+        self.__mianViewRange_more_x = [2 / 8.0, 6 / 8.0]  # 链接 “更多” 出现在xzhou这个范围内被认为中央区域寒含有更多
+        self.__standardTitleLength = 12  # 标准标题长度
+        self.__standardTitleDensity = 0.2  # 标准标题密度
 
         # 页面属性
         self.__pageWidth = 0
@@ -57,7 +57,7 @@ class ChannelJudge(object):
 
         # 浏览器初始化
         self.driver = driver
-        
+
         # 日志系统初始化
         self.LOG = logging
 
@@ -79,13 +79,13 @@ class ChannelJudge(object):
                                        r'\[?下一页\]?|前页|后页|前一页|后一页|\[?尾页\]?|最?末页|前一天|后一天|'
                                        r'r<<上一页|下一页>>|&lt;&lt;|上一页|下一页&gt;&gt;|&lt;前页|后页&gt;|Next|末页)\s*$'
                                        , re.I)
- 
+
         # 锚文本黑名单
         self.Black = [
             u"跳转", u"内容区域", u"查询", u"^第一编", u"^第二编", u"^第三编",
             u"^第一章", u"^第二章", u"^第三章", u"^第四章", u"^第五章", u"^第六章", u"^第七章",
-            u"^第八章", u"^第九章", u"^第十章",u"关于我们",u"联系我们",u"版权说明",u"关于本站",u"网站地图",u"返回首页",
-            u"意见反馈",u"设为首页",u"加入收藏",u"^陕公网安备","设为首页","加入收藏","下载附件"
+            u"^第八章", u"^第九章", u"^第十章", u"关于我们", u"联系我们", u"版权说明", u"关于本站", u"网站地图", u"返回首页",
+            u"意见反馈", u"设为首页", u"加入收藏", u"^陕公网安备", "设为首页", "加入收藏", "下载附件"
         ]
         self.anchor_black_regx = re.compile(r'%s' % ("|".join(self.Black)), re.I)
 
@@ -94,19 +94,21 @@ class ChannelJudge(object):
         self.more_regx = re.compile(r'%s' % ("|".join(self.more)), re.I)
 
         # 列表时间特征
-        self.__postFeaturesRegex4 = re.compile(r'\d{1,2}(-|/|\.)\d{1,2}|(((?<!\d)\d{4}|(?<!\d)\d{2})(-|/|\.)\d{1,2}\3\d{1,2}\b([\s\xa0]*\d{1,2}:\d{1,2}(:\d{1,2})?)?)|(\d{1,2}(-|/|\.)\d{1,2}\b[\s\xa0]*\d{1,2}:\d{1,2}(:\d{1,2})?)|(((\d{4}|\d{2})年)?\d{1,2}月\d{1,2}日([\s\xa0]*\d{1,2}:\d{1,2}(:\d{1,2})?)?)|(\d{1,2}日[\s\xa0]*\d{1,2}:\d{1,2}(:\d{1,2})?)|(^[\s\xa0]*\d{1,2}:\d{1,2}(:\d{1,2})?[\s\xa0]*$)|(\d{2}-\d{2}[\s\xa0]+\d{2}-\d{2})|(^[\s\xa0]*[\(\[]?[\s\xa0]*\d{2}(-|/)\d{2}[\s\xa0]*[\)\]]?[\s\xa0]*$)|(\d{1,2}[\s\xa0]*(小时|分钟|秒)前)|((今天|昨天)[\s\xa0]*\d{1,2}:\d{1,2}(:\d{1,2})?)|(^(刚刚|昨天)$)',
+        self.__postFeaturesRegex4 = re.compile(
+            r'\d{1,2}(-|/|\.)\d{1,2}|(((?<!\d)\d{4}|(?<!\d)\d{2})(-|/|\.)\d{1,2}\3\d{1,2}\b([\s\xa0]*\d{1,2}:\d{1,2}(:\d{1,2})?)?)|(\d{1,2}(-|/|\.)\d{1,2}\b[\s\xa0]*\d{1,2}:\d{1,2}(:\d{1,2})?)|(((\d{4}|\d{2})年)?\d{1,2}月\d{1,2}日([\s\xa0]*\d{1,2}:\d{1,2}(:\d{1,2})?)?)|(\d{1,2}日[\s\xa0]*\d{1,2}:\d{1,2}(:\d{1,2})?)|(^[\s\xa0]*\d{1,2}:\d{1,2}(:\d{1,2})?[\s\xa0]*$)|(\d{2}-\d{2}[\s\xa0]+\d{2}-\d{2})|(^[\s\xa0]*[\(\[]?[\s\xa0]*\d{2}(-|/)\d{2}[\s\xa0]*[\)\]]?[\s\xa0]*$)|(\d{1,2}[\s\xa0]*(小时|分钟|秒)前)|((今天|昨天)[\s\xa0]*\d{1,2}:\d{1,2}(:\d{1,2})?)|(^(刚刚|昨天)$)',
             re.I)
-        
+
         # url黑名单
-        self.__urlBlack = ["Show!detail.action?", "/detail.action?", "detail.action?docId", "/linkFriend", "/AricleDetail", "/ArticleDetail.",
-            "/detail/", "/detail.", "/NewsDetail.", "/IndexDetail.", "/InfoDetail."
-        ]
-    
+        self.__urlBlack = ["Show!detail.action?", "/detail.action?", "detail.action?docId", "/linkFriend",
+                           "/AricleDetail", "/ArticleDetail.",
+                           "/detail/", "/detail.", "/NewsDetail.", "/IndexDetail.", "/InfoDetail."
+                           ]
+
     def purification(self, text):
         """
         去除字符串中空白字符
         """
-        return re.sub(r'\s','',text)
+        return re.sub(r'\s', '', text)
 
     def getPage_property_after_request(self):
         """
@@ -124,6 +126,7 @@ class ChannelJudge(object):
             self.__bodypageHeight = int(self.driver.execute_script(self.__pageHeightJs))
         except:
             self.__bodypageHeight = 0
+
         self.__pageHeight = self.__driverHeight
 
         if self.__bodypageHeight == 0:
@@ -164,7 +167,6 @@ class ChannelJudge(object):
             self.LOG.error("float(a_anchor_text) / float(total_text_length) something wrong")
             return False
 
-
     def get_father_xpath_two(self, xpath1, xpath2):
         """
         计算两个xpath的最大父节点
@@ -188,7 +190,7 @@ class ChannelJudge(object):
         """
         if len(xpaths) == 1:
             return xpaths[0]
-        new = self.get_father_xpath_two(xpaths.pop(),xpaths.pop())
+        new = self.get_father_xpath_two(xpaths.pop(), xpaths.pop())
         xpaths.append(new)
         return self.get_father_xpath(xpaths)
 
@@ -208,7 +210,7 @@ class ChannelJudge(object):
         for idx in range(len(num_list) - 1):
             tmp = 0
             for jdx in range(len(num_list[0])):
-                if num_list[idx][jdx] != num_list[idx+1][jdx]:
+                if num_list[idx][jdx] != num_list[idx + 1][jdx]:
                     tmp += 1
                     check_point.append(jdx)
             deff_num.append(tmp)
@@ -217,14 +219,13 @@ class ChannelJudge(object):
         else:
             return False
 
-
     def get_list_father_xpath(self, links):
         """
         :return: 是否为同一列表, 最大父节点xpath
         """
         xpath_list = [x[1] for x in links]
         xpath_list_without_num = [re.sub(r"\d", "", x) for x in xpath_list]
-        num_list = [re.findall(r'\d+',x) for x in xpath_list]
+        num_list = [re.findall(r'\d+', x) for x in xpath_list]
 
         if len(set(xpath_list_without_num)) != 1:
             return False, ""
@@ -250,15 +251,16 @@ class ChannelJudge(object):
                 xpath_location_x.append(self.driver.find_element_by_xpath(xpath).location["x"])
             except:
                 self.LOG.error("{}: {}无法正常定位该xpath".format(self.driver.current_url, xpath))
-    
+
         diff_x = (max(xpath_location_x) - min(xpath_location_x)) if len(xpath_location_x) > 0 else 0
 
         # 判断元素位置信息
         if xpath_location_x and is_one_block and (diff_x < 100 or diff_x > 350) and diff_x < 800 \
-                      and ((min(xpath_location_x) - self.real_link_left) < (4/8.0)*(self.__pageWidth) or (father_location_x - self.real_link_left < (4/8.0)*(self.__pageWidth))):
+                and ((min(xpath_location_x) - self.real_link_left) < (4 / 8.0) * (self.__pageWidth) or (
+                father_location_x - self.real_link_left < (4 / 8.0) * (self.__pageWidth))):
             return True, father
         else:
-            return False,""
+            return False, ""
 
     def get_father_element(self, Ele_list):
         """
@@ -280,7 +282,7 @@ class ChannelJudge(object):
         """
         try:
             content = self.driver.find_element_by_xpath(xpath)
-            if (start*self.__pageHeight <= content.location['y'] < end*self.__pageHeight):
+            if (start * self.__pageHeight <= content.location['y'] < end * self.__pageHeight):
                 return True
             else:
                 return False
@@ -295,14 +297,7 @@ class ChannelJudge(object):
         :param end:
         :return: bool
         """
-        try:
-            # content = self.driver.find_element_by_xpath(xpath)
-            if (start*self.__pageWidth <= content.location['x'] < end*self.__pageWidth):
-                return True
-            else:
-                return False
-        except:
-            self.LOG.error("{}无法找到该xpath".format(self.driver.current_url))
+        return start * self.__pageWidth <= content.location['x'] < end * self.__pageWidth
 
     def clean_links_Ele(self, links_Ele):
         """
@@ -311,10 +306,10 @@ class ChannelJudge(object):
         """
         result = []
         del_Ele = []
-        for idx in range(len(links_Ele)-1):
+        for idx in range(len(links_Ele) - 1):
             cala_father = [links_Ele[idx]]
-            for jdx in range(idx+1, len(links_Ele)):
-                if links_Ele[jdx][2] == "" or links_Ele[jdx][2] != links_Ele[idx][2]\
+            for jdx in range(idx + 1, len(links_Ele)):
+                if links_Ele[jdx][2] == "" or links_Ele[jdx][2] != links_Ele[idx][2] \
                         or links_Ele[idx][3] is not None:
                     new = self.get_father_element(cala_father)
                     result.append(new)
@@ -347,41 +342,27 @@ class ChannelJudge(object):
         tops = []
         self.LOG.info("Judging element visibility.")
         self.LOG.info("And also judging the reverse characteristics.")
-        links = {"notext":[],"cansee":[],"nosee":[],}
+        links = {"notext": [], "cansee": [], "nosee": [], }
 
-        for idx,link in enumerate(all_links):
+        for idx, link in enumerate(all_links):
             # 获取链接位置
             try:
-               left = link.location["x"] if link.location["x"] else 0
-               lefts.append(left)
-               top = link.location["y"] if link.location["y"] else 0
-               tops.append(top)
+                left = link.location["x"] if link.location["x"] else 0
+                lefts.append(left)
+                top = link.location["y"] if link.location["y"] else 0
+                tops.append(top)
             except:
-                self.LOG.error("Cannot get X-axis or Y-axis coordinates in: NO." + str(idx) + " link" )
+                self.LOG.error("Cannot get X-axis or Y-axis coordinates in: NO." + str(idx) + " link")
                 continue
 
-            # 中央区域是否包含 “更多” 的链接
-            if len(self.more_regx.findall(link.text.replace(" ",''))) > 0:
-                if (link.get_attribute("href") and "#" not in link.get_attribute("href") and \
-                    len(link.text.replace(" ",'')) < 8 and link.get_attribute("href") != self.driver.current_url)\
-                        or link.get_attribute("onclick") is not None:
-                    if self.check_location_x(link, self.__mianViewRange_more_x[0], self.__mianViewRange_more_x[1]):
-                        self.more_in_center = True
-                        self.more_in_center_num += 1
-                        self.more_in_center_link = link.get_attribute("href")
-                        if self.more_in_center_num > 1:
-                            self.more_in_center_num = 0
-                            self.LOG.warn("too many more in center")
-                            return False
-            
             # 链接字数小于4被认为无文本 （导航栏链接多为4）（不重要）
             if len(link.text.replace(r'\r', '').replace(r'\n', '').replace(' ', '').strip()) < 4:
                 links["notext"].append(link)
-            
+
             # 可见性标记（重要）
             if (link.get_attribute("href") and link.get_attribute("href") != self.driver.current_url \
-                    and link.get_attribute("href") != self.driver.current_url + "#" \
-                    and link.is_displayed()) or \
+                and link.get_attribute("href") != self.driver.current_url + "#" \
+                and link.is_displayed()) or \
                     link.get_attribute("onclick") is not None:
                 links["cansee"].append(link)
             else:
@@ -398,18 +379,18 @@ class ChannelJudge(object):
                         continue
             for one in all:
                 try:
-                    self.driver.execute_script("arguments[0].setAttribute('"+attr+"','yeap');", one)
+                    self.driver.execute_script("arguments[0].setAttribute('" + attr + "','yeap');", one)
                 except:
                     continue
         # 实际链接在页面上范围。
         ### NOTE: 适配情况 iframe整体靠右的情况
         if len(lefts) > 0:
-            self.real_link_left = 0# min(lefts) if min(lefts) > 0 else 0
+            self.real_link_left = 0  # min(lefts) if min(lefts) > 0 else 0
             self.LOG.info("real left is {}".format(self.real_link_left))
         else:
             self.real_link_left = 0
         if len(tops) > 0:
-            self.real_link_top = 0# min(tops) if min(tops) >= 0 else 0
+            self.real_link_top = 0  # min(tops) if min(tops) >= 0 else 0
             self.LOG.info("real top is {}".format(self.real_link_top))
             self.real_link_botton = max(tops) if max(tops) >= 0 else 0
             self.LOG.info("real botton is {}".format(self.real_link_botton))
@@ -418,7 +399,7 @@ class ChannelJudge(object):
             self.real_link_botton = self.__pageHeight
         return True
 
-    def tag_a_min_father_node(self,list_download = False):
+    def tag_a_min_father_node(self, list_download=False):
         """
         计算提取可疑列表区域        
         :return: [xpath1,xpath2,xpath3,...]
@@ -428,23 +409,21 @@ class ChannelJudge(object):
         # 预处理: 将可见<a>设置属性cansee
         if not self.watch_links():
             return []
-        
+
         # xpath提取基于etree
         root = etree.HTML(self.driver.page_source)
         Eleroot = etree.ElementTree(root)
-        links =  Eleroot.findall('//a[@cansee]')
+        links = Eleroot.findall('//a[@cansee]')
         self.LOG.info("Filtered after all the number of links: {}".format(len(links)))
 
         # 有效链接
         links_Ele = [(self.purification(x.xpath("string(.)")),
                       Eleroot.getpath(x).replace("/html/body/html/body", "/html/body"),
-                      x.attrib.get("href",""),
-                      x.attrib.get("onclick", None)) \
-                      for x in links \
-                      if self.purification(x.xpath("string(.)")) and len(self.purification(x.xpath("string(.)"))) > 3 and self.anchor_black_regx.search(self.purification(x.xpath("string(.)"))) is None\
-                        and not x.attrib.get("href","") == ("javascript:void(0)")\
-                        and (not x.attrib.get("href","").startswith("#") and not x.attrib.get("href","") == "./" or
-                        x.attrib.get("onclick", None) is not None)
+                      x.attrib.get("href", ""),
+                      x.attrib.get("onclick", None))
+                     for x in links
+                     if self.purification(x.xpath("string(.)")) and
+                     len(self.purification(x.xpath("string(.)"))) > 3
                      ]
 
         # 元素清洗
@@ -453,14 +432,14 @@ class ChannelJudge(object):
 
         # 扫描有效链接，提取最小父节点xpath
         for idx in range(len(links_Ele) - self.__minElesInList - 1):
-            is_list, father_xpath = self.get_list_father_xpath(links_Ele[idx : idx + self.__minElesInList])
+            is_list, father_xpath = self.get_list_father_xpath(links_Ele[idx: idx + self.__minElesInList])
             if is_list:
                 # 符合列表逻辑
                 father_list.append(father_xpath)
 
         return list(set(father_list))
 
-    def get_page_list(self,list_download = False):
+    def get_page_list(self, list_download=False):
         """
         可疑列表区域提取
         获取符合要求的列表xpath
@@ -468,18 +447,18 @@ class ChannelJudge(object):
         1. 可见
         2. 列表元素数量超过最小要求数量
         """
-        #可疑列表区域
+        # 可疑列表区域
         list_area = self.tag_a_min_father_node(list_download)
         self.LOG.info("List before filtering: {}".format(list_area))
         self.LOG.info("The number of lists before filtering: {}".format(len(list_area)))
         return list_area
 
-    def judge_list_xpath(self, list_download = False):
+    def judge_list_xpath(self, list_download=False):
         """
         判断获取到的列表xpath是否在主视图区域
         :return:
         """
-        a_list= []
+        a_list = []
         list_xpath = []
         result = []
         list_xpath = self.get_page_list(list_download)
@@ -488,11 +467,11 @@ class ChannelJudge(object):
             for item in list_xpath:
                 a_size_list = []
                 a_x_list = []
-                a_list =[]
+                a_list = []
                 try:
                     a_list = self.driver.find_elements_by_xpath(item + '//a[@cansee]')
                 except:
-                    self.LOG.error("{}:{}无法找到该xpath" .format(self.driver.current_url, item + '//a[@cansee]'))
+                    self.LOG.error("{}:{}无法找到该xpath".format(self.driver.current_url, item + '//a[@cansee]'))
                     continue
 
                 for element in a_list:
@@ -506,10 +485,11 @@ class ChannelJudge(object):
                 max_a_size = max(a_size_list) if len(a_size_list) > 0 else 0
                 try:
                     if max_a_size == 0:
-                        max_a_size = self.driver.find_element_by_xpath(item).size['width'] if self.driver.find_element_by_xpath(item).size['width'] and \
-                                                                                              self.driver.find_element_by_xpath(item).size['width'] != 0 else 0
+                        max_a_size = self.driver.find_element_by_xpath(item).size['width'] if \
+                            self.driver.find_element_by_xpath(item).size['width'] and \
+                            self.driver.find_element_by_xpath(item).size['width'] != 0 else 0
                 except:
-                    self.LOG.error("{}:{}无法找到该xpath".format(self.driver.current_url, item ))
+                    self.LOG.error("{}:{}无法找到该xpath".format(self.driver.current_url, item))
                     max_a_size = 0
                 if max_a_size == 0:
                     continue
@@ -522,10 +502,10 @@ class ChannelJudge(object):
                 ### 这个也许有更好的方法
                 start = content.location['x']
                 if self.real_link_left > self.__pageHalfWidth and content.location['x'] > self.__pageHalfWidth:
-                    self.__pageHalfWidth = ((self.__pageHalfWidth * 2 - self.real_link_left)/2)+self.real_link_left
+                    self.__pageHalfWidth = ((self.__pageHalfWidth * 2 - self.real_link_left) / 2) + self.real_link_left
                 if (0 <= start < self.__pageHalfWidth):
                     if (start + max_a_size) > (self.__pageHalfWidth - 50) or (
-                                start + content.size['width']) > (self.__pageHalfWidth - 50):
+                            start + content.size['width']) > (self.__pageHalfWidth - 50):
                         result.append(item)
 
         self.LOG.info("List after main-view filtering: {}".format(result))
@@ -567,16 +547,18 @@ class ChannelJudge(object):
         list_A_x = [x.location["x"] for x in list_A]
         list_B_x = [x.location["x"] for x in list_B]
 
-        a = self.driver.find_element_by_xpath("/html").text.replace(" ","").find(self.driver.find_element_by_xpath(xpath_first).text.replace(" ",''))
-        b = len(self.driver.find_element_by_xpath(xpath_first).text.replace(" ",''))
-        c = self.driver.find_element_by_xpath("/html").text.replace(" ","").find(self.driver.find_element_by_xpath(xpath_second).text.replace(" ",''))
-        d = len(self.driver.find_element_by_xpath(xpath_second).text.replace(" ",''))
+        a = self.driver.find_element_by_xpath("/html").text.replace(" ", "").find(
+            self.driver.find_element_by_xpath(xpath_first).text.replace(" ", ''))
+        b = len(self.driver.find_element_by_xpath(xpath_first).text.replace(" ", ''))
+        c = self.driver.find_element_by_xpath("/html").text.replace(" ", "").find(
+            self.driver.find_element_by_xpath(xpath_second).text.replace(" ", ''))
+        d = len(self.driver.find_element_by_xpath(xpath_second).text.replace(" ", ''))
         if a > c:
             dis = a - c - d
         else:
             dis = c - a - b
         self.LOG.info("who is ur father ? dis is {}".format(dis * (-1)))
-        if dis*dis > (3)*(3):
+        if dis * dis > (3) * (3):
             self.LOG.info("i am not ur father {}".format(dis * (-1)))
             return False
         if len(set(list_A_x)) == len(set(list_B_x)):
@@ -625,16 +607,16 @@ class ChannelJudge(object):
                 "备案序号：") >= 0:
             self.LOG.info("some word i don`t want to see")
             return False
-        a_List = self.driver.find_elements_by_xpath(xpath+"//a[@cansee]")
+        a_List = self.driver.find_elements_by_xpath(xpath + "//a[@cansee]")
         for a in a_List:
             if len(a.text.replace(r'\r', '').replace(r'\n', '').replace(' ', '')) < 9 and \
                     (a.text.replace(r'\r', '').replace(r'\n', '').replace(' ', '').find("更多") >= 0 or
-                    a.text.replace(r'\r', '').replace(r'\n', '').replace(' ', '').find("More") >= 0):
+                     a.text.replace(r'\r', '').replace(r'\n', '').replace(' ', '').find("More") >= 0):
                 self.LOG.info("i wanna more not just u")
                 self.more_in_center = True
         return True
 
-    def get_list_area(self, list_download = False):
+    def get_list_area(self, list_download=False):
         _, resultList = self.is_channel_page_list(list_download)
         return resultList
 
@@ -668,7 +650,7 @@ class ChannelJudge(object):
         else:
             return False, []
 
-    def text_ratio(self, reverse = False):
+    def text_ratio(self, reverse=False):
         """
         页面总字数不能超过链接总字数的40倍
         """
@@ -682,7 +664,7 @@ class ChannelJudge(object):
         script_len = 0
         for script in scripts:
             script_len += len(script.text)
-        body_text_len = len(body_content.text.replace("\t","").replace(" ","")) - script_len
+        body_text_len = len(body_content.text.replace("\t", "").replace(" ", "")) - script_len
         self.LOG.info("body_text_len:{}, a_text_len:{}".format(body_text_len, a_text_len))
         if a_text_len > 0:
             if not reverse:
@@ -719,7 +701,7 @@ class ChannelJudge(object):
 
     def check_proportion_of(self, xpath, proportion):
         try:
-            contents = self.driver.find_elements_by_xpath(xpath+"//a[@cansee]")
+            contents = self.driver.find_elements_by_xpath(xpath + "//a[@cansee]")
             contents_location = [x.location["y"] for x in contents]
             contents_diff = max(contents_location) - min(contents_location)
             self.LOG.info("contents_diff is {}".format(contents_diff))
@@ -749,7 +731,7 @@ class ChannelJudge(object):
             self.LOG.error("is_Flip_in_xpath 发现不可预见异常\n {}".format(traceback.format_exc()))
             return False
 
-    def last_xpath_level(self, xpath_list, if_y = True):
+    def last_xpath_level(self, xpath_list, if_y=True):
         """
         # 最终xpath超过两个， xpath小于3层
         :return:
@@ -761,7 +743,7 @@ class ChannelJudge(object):
                     xpath_list.remove(xpath)
         return xpath_list
 
-    def last_xpath_rule(self, xpath_list, if_y = True):
+    def last_xpath_rule(self, xpath_list, if_y=True):
         """
          最终xpath超过两个， xpath小于4层
         :return:
@@ -774,11 +756,12 @@ class ChannelJudge(object):
                     self.LOG.info("remove {} beacuse location_y".format(xpath_list))
                     xpath_list.remove(xpath)
             # 1-1.3屏之间的
-            if xpath in xpath_list and if_y and self.check_location_y(xpath, 1, 1.3) and not self.check_proportion_of(xpath, 0.3):
+            if xpath in xpath_list and if_y and self.check_location_y(xpath, 1, 1.3) and not self.check_proportion_of(
+                    xpath, 0.3):
                 if xpath in xpath_list:
                     self.LOG.info("remove {} beacuse check_proportion_of".format(xpath_list))
                     xpath_list.remove(xpath)
-            
+
             self.LOG.info("start check more {}".format(xpath_list))
 
             if xpath in xpath_list and self.check_more(xpath):
@@ -804,14 +787,14 @@ class ChannelJudge(object):
         num = 0
         for link in all_links:
             if len(self.more_regx.findall(link.text.replace(" ", ''))) > 0 and \
-                len(self.purification(link.text)) < 7:
-                num+=1
+                    len(self.purification(link.text)) < 7:
+                num += 1
                 self.__return_more = True
         if num >= 2 and float(num) < float(links_num) * 0.8:
             return True
         return False
 
-    def filter(self, xpaths, noly = False):
+    def filter(self, xpaths, noly=False):
         """
         列表内元素文本分布规律达到要求 或 列表内列表日期数量达到要求
         且
@@ -823,7 +806,7 @@ class ChannelJudge(object):
                 if self.is_like_nav(xpath):
                     res.append(xpath)
         return res
-    
+
     def is_like_nav(self, xpath):
         """
         确保列表内元素不再同一行
@@ -854,17 +837,20 @@ class ChannelJudge(object):
 
         num = 0
         for link in links:
-            if len(link.text.strip().replace("·","")) > 4:
+            if len(link.text.strip().replace("·", "")) > 4:
                 text = re.sub(r"\d", "", link.text)
                 tmp.append(len(text.strip()))
             if len(link.text) >= self.__standardTitleLength or (len(link.text) == 0 and link.size["width"] > 400):
                 num += 1
-    
+
         if float(num) >= len(list(set(hrefs))) * self.__standardTitleDensity:
-            self.LOG.info("Headings exceeding the standard length (" + str(self.__standardTitleLength) + ") exceed the standard density(" + str(self.__standardTitleDensity) + ")")
+            self.LOG.info("Headings exceeding the standard length (" + str(
+                self.__standardTitleLength) + ") exceed the standard density(" + str(self.__standardTitleDensity) + ")")
             return True
-        if float(num) < len(list(set(hrefs))) * self.__standardTitleDensity and len(set(tmp)) == 1 and float(len(tmp)) > len(list(set(hrefs)))* 0.7:
-            self.LOG.info("The value of the title over the standard length is less than the standard density but is neatly arranged")
+        if float(num) < len(list(set(hrefs))) * self.__standardTitleDensity and len(set(tmp)) == 1 and float(
+                len(tmp)) > len(list(set(hrefs))) * 0.7:
+            self.LOG.info(
+                "The value of the title over the standard length is less than the standard density but is neatly arranged")
             return True
 
         self.LOG.info("effect have :{}".format(float(num)))
@@ -886,7 +872,6 @@ class ChannelJudge(object):
             return True
         return False
 
-
     # too slow !!!
     def img_in_link(self, xpath):
         """
@@ -896,7 +881,7 @@ class ChannelJudge(object):
             return False
         if xpath == "/html/body/div[5]/div/ul" and ".sheitc.gov." in self.driver.current_url:
             return False
-        #加入规则硬匹配 1
+        # 加入规则硬匹配 1
         links = self.driver.find_elements_by_xpath(xpath + "//a[@href and @notext and not(starts-with(@href,'#'))\
                                                                  and not(starts-with(@href,'java'))]\
                                                                     //img")
@@ -915,14 +900,13 @@ class ChannelJudge(object):
                                                                     //img")
         links = list(set(links) - set(page_links))
 
-
         all_link_num = [x.get_attribute("href") for x in all_link if x.get_attribute("href")]
-        if (len(links) > 0 and float(len(links)) < len(list(set(all_link_num)))/3.0):
+        if (len(links) > 0 and float(len(links)) < len(list(set(all_link_num))) / 3.0):
             self.LOG.info("img in link, WTF")
             return True
         return False
 
-    def is_channel_page_list(self, list_download = False):
+    def is_channel_page_list(self, list_download=False):
         """
         判断是否为频道页
         return格式: [[is_channel, has_more], [xpath]]
@@ -934,27 +918,6 @@ class ChannelJudge(object):
             result, resultList = self.list_judge(list_download)
             self.LOG.info("url :{} (http list): {}".format(self.driver.current_url, result))
             return result, resultList
-        
-        # 黑名单规则匹配
-        try:
-            if ".yantian." in self.driver.current_url and self.driver.find_element_by_xpath("/html/head/meta[@name='ArticleTitle']") is not None:
-                self.LOG.info("channel judge: meta contains ArticleTitle")
-                return False, []
-        except:
-            self.LOG.error("channel judge:meta can go on")
-            
-            for url_black in self.__urlBlack:
-                if url_black in self.driver.current_url:
-                    return False, []
-
-        # title是首页不为目录页
-        try:
-            r2 = EC.title_is(u'首页')(self.driver)
-            if r2:
-                self.LOG.info("channel judge: title contains {}".format(r2))
-                return False, []
-        except:
-            self.LOG.error("channel judge:title contains judge fail")
 
         # 网页总文本长度/锚文本长度 > 40
         # 链接密度过小
@@ -962,7 +925,7 @@ class ChannelJudge(object):
             ratio = self.text_ratio()
             self.LOG.info("channel judge ratio:{}".format(ratio))
             if ratio > 40:
-                return [False,False], []
+                return [False, False], []
         except:
             self.LOG.error("channel judge: body len and a text len fail")
 
@@ -970,41 +933,33 @@ class ChannelJudge(object):
         self.getPage_property_after_request()
         result, resultList = self.list_judge(list_download)
 
-        # has_more是后期需求
-        # 格式化接口参数
-        tmp = []
-        tmp.append(result)
-        tmp.append(self.__return_more)
-        result = tmp
-        self.__return_more = False
-
-        self.LOG.info("url :{} (http list): {}".format(self.driver.current_url, result))
         return result, resultList
 
-    def is_channel_page(self, list_download = False):
+    def is_channel_page(self, list_download=False):
 
         result, resultList = self.is_channel_page_list(list_download)
         return result, resultList
 
 
 # 频道识别
-def is_channel_judge(chrome_driver, policyid, list_download = False):
+def is_channel_judge(chrome_driver, policyid, list_download=False):
     judge = ChannelJudge(chrome_driver, policyid)
     return judge.is_channel_page(list_download)
 
+
 # 返回列表区域的xpath
-def get_list_xpath(chrome_driver, policyid, list_download = False):
+def get_list_xpath(chrome_driver, policyid, list_download=False):
     area = ChannelJudge(chrome_driver, policyid)
     return area.get_list_area(list_download)
 
+
 if __name__ == '__main__':
     # 单例测试
-    c = chrome_option("test")
+    c = chrome_option("test", True)
     driver = c.chrome_init()
-    # 请你关注我好么
-    # 下面是我的简书页面
-    c.open_url("https://www.jianshu.com/u/83c7ce3fa495",driver)
-    import time,random
+    c.open_url("https://www.jianshu.com/u/83c7ce3fa495", driver)
+    # c.open_url("https://guba.eastmoney.com/default,1_1.html", driver)
+
     time.sleep(random.uniform(5, 8))
     print(get_list_xpath(driver, "test"))
     driver.quit()
