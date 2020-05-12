@@ -62,7 +62,7 @@ class Chrome(object):
             opts.add_argument('--disable-plugins')
             driver = webdriver.Chrome(chrome_options=opts, desired_capabilities=dec)
             driver.implicitly_wait(30)
-            driver.set_page_load_timeout(100)
+            driver.set_page_load_timeout(5)
             return driver
         except Exception as e:
             self.LOG.error('chrome list driver init fail: {}'.format(e))
@@ -87,17 +87,20 @@ class Chrome(object):
         return None
 
     def open_url(self, url, driver):
-        driver.get(url)
-        # time.sleep(random.uniform(10, 15))
-        Status = self.getHttpStatus(driver)
-        try_num = 0
-        while try_num < 60 and Status is None:
-            time.sleep(0.5)
-            try_num += 1
+        try:
+            driver.get(url)
+            # time.sleep(random.uniform(10, 15))
             Status = self.getHttpStatus(driver)
-        # print Status
-        assert Status == 200
-        time.sleep(random.uniform(3, 5))
+            try_num = 0
+            while try_num < 60 and Status is None:
+                time.sleep(0.5)
+                try_num += 1
+                Status = self.getHttpStatus(driver)
+            # print Status
+            assert Status == 200
+            time.sleep(random.uniform(3, 5))
+        except Exception as e:
+            print("open url err: ", e)
 
     def chrome_quit(self, driver):
         if driver is not None:
