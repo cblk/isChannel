@@ -9,7 +9,6 @@ Date: '2018/6/5' '15:12'
 """
 import json
 import logging
-import random
 import time
 
 import requests
@@ -22,10 +21,14 @@ logging.basicConfig(level=logging.INFO,
                     )
 
 
+def chrome_quit(driver):
+    if driver is not None:
+        driver.quit()
+
+
 class Chrome(object):
-    def __init__(self, policyid, headless=False):
+    def __init__(self, headless=False):
         self.Session = requests.session()
-        self.policyid = policyid
         self.LOG = logging
         self.headless = headless
         # chrome exe and driver path
@@ -35,8 +38,10 @@ class Chrome(object):
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) '
                           'Chrome/74.0.3729.131 Safari/537.36 '
         }
+        self.driver = None
+        self.chrome_init()
 
-    def copyChrome(self, name):
+    def copy_chrome(self, name):
         """
         拷贝文件
         """
@@ -60,64 +65,53 @@ class Chrome(object):
             opts.add_argument('--disable-gpu')
             opts.add_argument('--disable-images')
             opts.add_argument('--disable-plugins')
-            driver = webdriver.Chrome(chrome_options=opts, desired_capabilities=dec)
-            driver.implicitly_wait(30)
-            driver.set_page_load_timeout(5)
-            return driver
+            self.driver = webdriver.Chrome(chrome_options=opts, desired_capabilities=dec)
+            self.driver.implicitly_wait(30)
+            self.driver.set_page_load_timeout(20)
+            return self.driver
         except Exception as e:
             self.LOG.error('chrome list driver init fail: {}'.format(e))
             return None
 
-    def getHttpStatus(self, browser):
+    def get_http_status(self):
         try:
-            if self.get_url(browser.current_url).status_code == 200:
-                self.LOG.info('{url} requests 请求成功'.format(url=browser.current_url))
+            if self.get_url(self.driver.current_url).status_code == 200:
+                self.LOG.info('{url} requests 请求成功'.format(url=self.driver.current_url))
                 return 200
-        except:
-            self.LOG.info('{url} requests 请求失败'.format(url=browser.current_url))
+        except Exception as e:
+            self.LOG.info('{url} requests 请求失败 {err}'.format(url=self.driver.current_url, err=e))
             return None
-        for responseReceived in browser.get_log('performance'):
+        for responseReceived in self.driver.get_log('performance'):
             try:
                 response = json.loads(responseReceived[u'message'])[u'message'][u'params'][u'response']
-                if response[u'url'] == browser.current_url:
+                if response[u'url'] == self.driver.current_url:
                     return response[u'status']
-            except:
-                self.LOG.info('{url} 当前页面无法访问'.format(url=browser.current_url))
+            except Exception as e:
+                self.LOG.info('{url} 当前页面无法访问 {err}'.format(url=self.driver.current_url, err=e))
                 return None
         return None
 
-    def open_url(self, url, driver):
+    def open_url(self, url):
         try:
-            driver.get(url)
-            # time.sleep(random.uniform(10, 15))
-            Status = self.getHttpStatus(driver)
+            self.driver.get(url)
+            status = self.get_http_status()
             try_num = 0
-            while try_num < 60 and Status is None:
-                time.sleep(0.5)
+            while try_num < 60 and status is None:
+                time.sleep(1)
                 try_num += 1
-                Status = self.getHttpStatus(driver)
-            # print Status
-            assert Status == 200
-            time.sleep(random.uniform(3, 5))
+                status = self.get_http_status()
+            # print status
+            assert status == 200
         except Exception as e:
             print("open url err: ", e)
 
-    def chrome_quit(self, driver):
-        if driver is not None:
-            driver.quit()
-
-    def chrom_kill(self):
-        pass
-
-
-# 类接口
-def chrome_option(policy, headlsee=False):
-    return Chrome(policy, headlsee)
+    def quit(self):
+        if self.driver is not None:
+            self.driver.quit()
 
 
 if __name__ == '__main__':
-    chromedriver = chrome_option('test')
-    test_driver = chromedriver.chrome_init()
-    chromedriver.open_url("http://www.npc.gov.cn/", test_driver)
-    print(test_driver.title)
-    chromedriver.chrome_quit(test_driver)
+    chrome_driver = Chrome()
+    chrome_driver.open_url("http://www.npc.gov.cn/")
+    print(chrome_driver.driver.title)
+    chrome_driver.quit()

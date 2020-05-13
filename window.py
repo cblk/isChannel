@@ -1,6 +1,6 @@
 import time
 
-from driver_common import chrome_option
+from driver_common import Chrome
 from list import ListArea
 
 
@@ -23,7 +23,7 @@ class Window:
 
     def set_size(self):
         """
-        设置浏览器大小
+        设置浏览器尺寸参数
         :return: None
         """
         try:
@@ -45,16 +45,6 @@ class Window:
             print("set_window_size err: {}".format(e))
 
         print("页面宽度: {} 页面高度: {}\n".format(self.__pageWidth, self.__pageHeight))
-
-    @staticmethod
-    def run(url):
-        c = chrome_option("test", False)
-        driver = c.chrome_init()
-        c.open_url(url, driver)
-        window = Window(driver)
-        window.set_size()
-        window.find_list()
-        time.sleep(100)
 
     def location(self, xpath):
         """
@@ -85,13 +75,16 @@ class Window:
     def center_dis(self, xpath):
         """
         计算页面元素的中心和页面中心的距离（归一化）
+        对于处于页面下半部分的元素，追加额外的距离
         :param xpath:
         :return:
         """
         x, y = self.center(xpath)
         x = (x - self.__pageHalfWidth) / self.__pageHalfWidth
         y = (y - self.__pageHalfHeight) / self.__pageHalfHeight
-        return (x ** 2 + y ** 2) ** 0.5
+        if y > 0:
+            y = y * 1.5
+        return (x ** 2 + y ** 2) ** 0.5 + 0.0001
 
     def area(self, xpath):
         """
@@ -104,13 +97,25 @@ class Window:
         y = siz['height'] / self.__pageHeight
         return x * y
 
-    def factor(self, xpath):
+    def factor(self, xpath, link_area_list):
         """
         计算页面的权重，用于筛选出中心位置的元素
+        :param link_area_list:
         :param xpath:
         :return:
         """
-        return self.area(xpath) / self.center_dis(xpath)
+        if len(link_area_list) == 0:
+            return 0
+        link_sum = 0
+        link_height_sum = 0
+        for link_area in link_area_list:
+            link_sum += len(link_area.items)
+            link_height = 0
+            for _item in link_area.items:
+                link_height += self.size(_item.xpath)['height']
+            link_height_sum += link_height
+        link_area_height = self.size(xpath)['height']
+        return self.area(xpath) / self.center_dis(xpath) * (link_height_sum / link_area_height) * (link_sum / 10)
 
     def find_list(self):
         """
@@ -118,12 +123,18 @@ class Window:
         :return:
         """
         res, _ = ListArea.find_list(page_src=self.driver.page_source)
-        res = sorted(res.items(), key=lambda x: self.factor(x[0]), reverse=True)
-        # res.sort(key=lambda x: self.factor(x.list_path), reverse=True)
+        for list_path in res:
+            res[list_path] = [list_area for list_area in res[list_path] if self.check_link_area(list_area)]
+
+        res = sorted(res.items(), key=lambda x: self.factor(x[0], x[1]), reverse=True)
+        has_list = False
         for list_path, link_area_list in res:
             for link_area in link_area_list:
-                if self.check_link_area(link_area):
-                    break
+                self.print_link_area(link_area)
+                has_list = True
+                break
+        if not has_list:
+            print('未找到列表')
 
     def check_link_area(self, link_area):
         """
@@ -134,27 +145,35 @@ class Window:
         :param link_area:
         :return:
         """
-        if self.is_vertical(link_area.links) and self.is_displayed_links(
-                link_area.links) and link_area.avg_words > 5:
-            path_list, list_path, item_path = link_area.print_list()
-            print("列表:   {}\nsize:  {}\nloc: {}\n".
-                  format(list_path, self.size(list_path), self.location(list_path)))
-            print("列表项:  {}\n".format(item_path))
-            for content, link, xpath in path_list:
-                print("title: {}\nurl:   {}\nsize: {}\nloc:   {}\n".
-                      format(content, link.get('href'), self.size(xpath), self.location(xpath)))
-            return True
-        return False
+        return self.is_vertical(link_area.items) and self.is_displayed_links(
+            link_area.items) and link_area.avg_words() > 5
 
-    def is_vertical(self, links):
+    def print_link_area(self, link_area):
         """
-        检查一个列表是否在页面上垂直布局
-        :param links:
+        输出格式化列表
+        :param link_area:
         :return:
         """
-        loc0 = self.location(ListArea.get_path(links[0]))
-        loc1 = self.location(ListArea.get_path(links[1]))
-        return abs(loc0['y'] - loc1['y']) > abs(loc0['x'] - loc1['x'])
+        list_path = link_area.list_path
+        print('---------------------------------------------')
+        print("列表:   {}\nsize:  {}\nloc: {}\n".
+              format(list_path, self.size(list_path), self.location(list_path)))
+        for item in link_area.items:
+            print("title: {}\nurl:   {}\nsize: {}\nloc:   {}\nxpath: {}\n".
+                  format(item.content, item.link.get('href'), self.size(item.xpath),
+                         self.location(item.xpath), item.rel_xpath))
+
+    def is_vertical(self, items):
+        """
+        检查一个列表是否在页面上垂直布局
+        :param items:
+        :return:
+        """
+        loc0 = self.location(items[0].xpath)
+        loc1 = self.location(items[1].xpath)
+        loc2 = self.location(items[2].xpath)
+        return loc0['y'] < loc1['y'] < loc2['y']
+        # return abs(loc0['y'] - loc1['y']) > abs(loc0['x'] - loc1['x'])
 
     def is_displayed(self, xpath):
         """
@@ -164,17 +183,30 @@ class Window:
         """
         return self.driver.find_element_by_xpath(xpath).is_displayed()
 
-    def is_displayed_links(self, links):
+    def is_displayed_links(self, items):
         """
         检查列表是否全部可见
-        :param links:
+        :param items:
         :return:
         """
-        for link in links:
-            xpath = ListArea.get_path(link)
-            if not self.is_displayed(xpath):
+        for _item in items:
+            if not self.is_displayed(_item.xpath):
                 return False
         return True
+
+    @staticmethod
+    def run(url):
+        """
+        根据url中获取列表
+        :param url:
+        :return:
+        """
+        c = Chrome()
+        c.open_url(url)
+        window = Window(c.driver)
+        window.set_size()
+        window.find_list()
+        time.sleep(100)
 
 
 if __name__ == '__main__':
@@ -190,4 +222,19 @@ if __name__ == '__main__':
     # Window.run("https://epaper.gmw.cn/gmrb/html/2020-03/16/nbs.D110000gmrb_01.htm")
     # Window.run("http://www.81.cn/jfjbmap/content/2020-03/12/node_3.htm")
     # Window.run("http://dz.jjckb.cn/www/pages/webpage2009/html/2020-03/12/node_4.htm")
-    Window.run("http://mrdx.cn/content/20200320/Page03DK.htm")
+    # Window.run("http://mrdx.cn/content/20200320/Page03DK.htm")
+    # Window.run("https://www.shobserver.com/journal/2020-03-12/page_12.htm")
+    # Window.run("https://www.shobserver.com/news/list?section=1")
+    # Window.run("https://tophub.today/n/KqndgxeLl9")
+    # Window.run("http://www.zgdazxw.com.cn/culture/node_2016.htm")
+    # Window.run("http://www.zgdazxw.com.cn/news/yaowen.html")
+    # Window.run("http://www.zgsjbs.com/zgsjb/sj/")
+    # Window.run("http://www.moe.gov.cn/jyb_xwfb/xw_zt/moe_357/jyzt_2019n/2019_zt2/zt1902_dbwy/")
+    # Window.run("http://www.sciencenet.cn/life/")
+    # Window.run("https://coffee.pmcaff.com/?type=2")
+    # Window.run("http://www.moe.gov.cn/jyb_xwfb/xw_zt/moe_357/jyzt_2020n/2020_zt03/")
+    # #Window.run("https://www.thepaper.cn/list_90069")
+    # Window.run("http://kdslife.com/f_15.html")
+    Window.run("https://www.qbitai.com/")
+    # Window.run("")
+    # Window.run("")
