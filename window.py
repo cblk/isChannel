@@ -1,7 +1,5 @@
-import time
-
 from driver_common import Chrome
-from list import ListArea
+from list_area import ListArea
 
 
 class Window:
@@ -117,7 +115,7 @@ class Window:
         link_area_height = self.size(xpath)['height']
         return self.area(xpath) / self.center_dis(xpath) * (link_height_sum / link_area_height) * (link_sum / 10)
 
-    def find_list(self):
+    def find_list(self, url, page_src=None):
         """
         获取列表
         :return:
@@ -127,14 +125,25 @@ class Window:
             res[list_path] = [list_area for list_area in res[list_path] if self.check_link_area(list_area)]
 
         res = sorted(res.items(), key=lambda x: self.factor(x[0], x[1]), reverse=True)
-        has_list = False
+        res_set = set()
+        li = []
         for list_path, link_area_list in res:
             for link_area in link_area_list:
-                self.print_link_area(link_area)
-                has_list = True
-                break
-        if not has_list:
+                path_list = self.print_all_list(link_area, url, page_src)
+                for p in path_list:
+                    if p not in res_set:
+                        li.append(p)
+                        res_set.add(p)
+        rules = []
+        for r in li:
+            rule = r'{data `xpath("%s")`[{title `xpath(".")`url `xpath(".");attr("href")`}]}' % r
+            rules.append(rule)
+            # print(rule)
+
+        if len(li) == 0:
             print('未找到列表')
+        return rules
+
 
     def check_link_area(self, link_area):
         """
@@ -162,6 +171,14 @@ class Window:
             print("title: {}\nurl:   {}\nsize: {}\nloc:   {}\nxpath: {}\n".
                   format(item.content, item.link.get('href'), self.size(item.xpath),
                          self.location(item.xpath), item.rel_xpath))
+
+    def print_all_list(self, link_area, url, page_src=None):
+        path_list = link_area.find_static_path(url, page_src)
+        rel_xpath = link_area.items[0].rel_xpath
+        res = set()
+        for list_path in path_list:
+            res.add(list_path + rel_xpath)
+        return list(res)
 
     def is_vertical(self, items):
         """
@@ -195,23 +212,26 @@ class Window:
         return True
 
     @staticmethod
-    def run(url):
+    def run(url, page_src=None):
         """
         根据url中获取列表
+        :param page_src:
         :param url:
         :return:
         """
-        c = Chrome()
+        c = Chrome(True)
         c.open_url(url)
         window = Window(c.driver)
         window.set_size()
-        window.find_list()
-        time.sleep(100)
+        return window.find_list(url, page_src)
 
 
 if __name__ == '__main__':
-    # Window.run("https://guba.eastmoney.com/default,1_1.html")
+    for r in Window.run("https://guba.eastmoney.com/default,1_1.html"):
+        print(r)
     # Window.run("https://stock.cngold.org/gundong/")
+    # Window.run("https://www.chaoqi.net/dujiabaodao/")
+    # Window.run("http://finance.camase.com/c4.aspx")
     # Window.run("http://www.zichanjie.com/zhuanlan/zepinghongguan")
     # Window.run("http://paper.jyb.cn/zgjyb/html/2020-03/20/node_2.htm")
     # Window.run("http://www.jyb.cn/rmtsy1240/zt/sxxy/")
@@ -235,6 +255,6 @@ if __name__ == '__main__':
     # Window.run("http://www.moe.gov.cn/jyb_xwfb/xw_zt/moe_357/jyzt_2020n/2020_zt03/")
     # #Window.run("https://www.thepaper.cn/list_90069")
     # Window.run("http://kdslife.com/f_15.html")
-    Window.run("https://www.qbitai.com/")
+    # Window.run("https://www.qbitai.com/")
     # Window.run("")
     # Window.run("")

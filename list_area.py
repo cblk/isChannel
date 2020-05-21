@@ -1,12 +1,10 @@
 import lxml.html as lh
 import requests
 from lxml import etree
-
-from html import *
+from my_html import *
 
 headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.131 '
-                  'Safari/537.36 '
+    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36'
 }
 
 
@@ -115,7 +113,7 @@ class ListArea:
         :return: 解析后的Element对象
         """
         if url is not None:
-            r = requests.get(url)
+            r = requests.get(url, headers=headers)
             r.encoding = r.apparent_encoding
             document = lh.fromstring(r.text)
         else:
@@ -153,10 +151,22 @@ class ListArea:
                     lis.append(list_area)
         return _res, lis
 
+    def find_static_path(self, url, page_src=None):
+        if page_src is None:
+            r = requests.get(url)
+            r.encoding = r.apparent_encoding
+            _document = lh.fromstring(r.text)
+        else:
+            _document = lh.fromstring(page_src)
+
+        target = find_node2(self.list_node, _document)
+        path_set = set()
+        for t in target:
+            path_set.add(etree.ElementTree(_document).getpath(t))
+        return list(path_set)
+
 
 if __name__ == '__main__':
-    _, res = ListArea.find_list(url='http://finance.camase.com/c4.aspx')
-    res.sort(key=lambda x: len(x.items), reverse=True)
-    print("列表:   {}\n".format(res[4].list_path))
-    for item in res[4].items:
-        print("title: {}\nurl:   {}\nxpath: {}\n".format(item.content, item.link.get('href'), item.xpath))
+    r = requests.get('https://guba.eastmoney.com/default,1_1.html', headers=headers)
+    r.encoding = r.apparent_encoding
+    document = lh.fromstring(r.text)

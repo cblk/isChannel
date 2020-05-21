@@ -1,12 +1,6 @@
 # !/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""
-File Name : driver_common.py
-Description: 浏览器操作层
-Author: lhzhang.Lyon
-Date: '2018/6/5' '15:12'
-"""
 import json
 import logging
 import time
@@ -41,12 +35,6 @@ class Chrome(object):
         self.driver = None
         self.chrome_init()
 
-    def copy_chrome(self, name):
-        """
-        拷贝文件
-        """
-        pass
-
     def get_url(self, url, last_url=None, stream=False, timeout=100):
         last_url = url
         self.headers['Referer'] = last_url
@@ -65,9 +53,11 @@ class Chrome(object):
             opts.add_argument('--disable-gpu')
             opts.add_argument('--disable-images')
             opts.add_argument('--disable-plugins')
+            opts.add_argument('--no-sandbox')
+            opts.add_argument('--disable-dev-shm-usage')
             self.driver = webdriver.Chrome(chrome_options=opts, desired_capabilities=dec)
             self.driver.implicitly_wait(30)
-            self.driver.set_page_load_timeout(20)
+            self.driver.set_page_load_timeout(25)
             return self.driver
         except Exception as e:
             self.LOG.error('chrome list driver init fail: {}'.format(e))

@@ -1,0 +1,7 @@
+version: '3'
+services:
+    api:
+        image: registry.cn-shanghai.aliyuncs.com/ybase/list-detector:dev
+        container_name: list-detector
+        ports:
+            - 8080:8080

@@ -1,4 +1,7 @@
 selenium==3.141.0
 requests==2.23.0
-lxml==4.5.0
+lxml==4.5.1
 python_Levenshtein==0.12.0
+Flask==1.1.2
+gunicorn==20.0.4
+gevent==20.5.0
