@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                     datefmt='%a, %d %b %Y %H:%M:%S',
                     )
-
+user_agent = 'Mozilla/5.0 (X11; Linux x86_64) Gecko/20100101 Chrome/83.0.4103.61 Safari/537.36'
 
 def chrome_quit(driver):
     if driver is not None:
@@ -49,12 +49,14 @@ class Chrome(object):
             dec['loggingPrefs'] = {'performance': 'ALL'}
             opts = webdriver.ChromeOptions()
             if self.headless:
-                opts.add_argument('headless')
+                opts.add_argument('--headless')
+            opts.add_argument('--no-sandbox')
+            opts.add_argument('--disable-dev-shm-usage')
             opts.add_argument('--disable-gpu')
             opts.add_argument('--disable-images')
             opts.add_argument('--disable-plugins')
-            opts.add_argument('--no-sandbox')
-            opts.add_argument('--disable-dev-shm-usage')
+            opts.add_argument(f'--user-agent={user_agent}')
+
             self.driver = webdriver.Chrome(chrome_options=opts, desired_capabilities=dec)
             self.driver.implicitly_wait(30)
             self.driver.set_page_load_timeout(25)

@@ -5,3 +5,5 @@ services:
         container_name: list-detector
         ports:
             - 8080:8080
+        volumes:
+        - ../isChannel:/app

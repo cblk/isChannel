@@ -1,6 +1,6 @@
 from flask import Flask
 from flask import request
-from window import Window
+from detector.window import Window
 
 app = Flask(__name__)
 

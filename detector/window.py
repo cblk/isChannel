@@ -1,5 +1,7 @@
-from driver_common import Chrome
-from list_area import ListArea
+from detector.driver_common import Chrome
+from detector.list_area import ListArea
+import lxml.html as lh
+import requests
 
 
 class Window:
@@ -113,7 +115,8 @@ class Window:
                 link_height += self.size(_item.xpath)['height']
             link_height_sum += link_height
         link_area_height = self.size(xpath)['height']
-        return self.area(xpath) / self.center_dis(xpath) * (link_height_sum / link_area_height) * (link_sum / 10)
+        return self.area(xpath) / (self.center_dis(xpath) + 0.001) * link_height_sum / (link_area_height + 0.001) * (
+                    link_sum / 10)
 
     def find_list(self, url, page_src=None):
         """
@@ -121,15 +124,29 @@ class Window:
         :return:
         """
         res, _ = ListArea.find_list(page_src=self.driver.page_source)
+
         for list_path in res:
             res[list_path] = [list_area for list_area in res[list_path] if self.check_link_area(list_area)]
 
         res = sorted(res.items(), key=lambda x: self.factor(x[0], x[1]), reverse=True)
         res_set = set()
         li = []
+
+        if page_src is None:
+            r = requests.get(url)
+            r.encoding = r.apparent_encoding
+            _document = lh.fromstring(r.text)
+            # with open('1.html', 'w') as f:
+            #     f.write(r.text)
+        else:
+            _document = lh.fromstring(page_src)
+
+        # with open('2.html', 'w') as f:
+        #     f.write(self.driver.page_source)
+
         for list_path, link_area_list in res:
             for link_area in link_area_list:
-                path_list = self.print_all_list(link_area, url, page_src)
+                path_list = self.print_all_list(link_area, _document)
                 for p in path_list:
                     if p not in res_set:
                         li.append(p)
@@ -138,12 +155,11 @@ class Window:
         for r in li:
             rule = r'{data `xpath("%s")`[{title `xpath(".")`url `xpath(".");attr("href")`}]}' % r
             rules.append(rule)
-            # print(rule)
+            print(rule)
 
         if len(li) == 0:
             print('未找到列表')
         return rules
-
 
     def check_link_area(self, link_area):
         """
@@ -172,8 +188,8 @@ class Window:
                   format(item.content, item.link.get('href'), self.size(item.xpath),
                          self.location(item.xpath), item.rel_xpath))
 
-    def print_all_list(self, link_area, url, page_src=None):
-        path_list = link_area.find_static_path(url, page_src)
+    def print_all_list(self, link_area, _document):
+        path_list = link_area.find_static_path(_document)
         rel_xpath = link_area.items[0].rel_xpath
         res = set()
         for list_path in path_list:
@@ -186,10 +202,10 @@ class Window:
         :param items:
         :return:
         """
-        loc0 = self.location(items[0].xpath)
-        loc1 = self.location(items[1].xpath)
-        loc2 = self.location(items[2].xpath)
-        return loc0['y'] < loc1['y'] < loc2['y']
+        items[0].loc = self.location(items[0].xpath)
+        items[1].loc = self.location(items[1].xpath)
+        items[2].loc = self.location(items[2].xpath)
+        return items[0].loc['y'] < items[1].loc['y'] < items[2].loc['y']
         # return abs(loc0['y'] - loc1['y']) > abs(loc0['x'] - loc1['x'])
 
     def is_displayed(self, xpath):
@@ -220,16 +236,17 @@ class Window:
         :return:
         """
         c = Chrome(True)
-        c.open_url(url)
         window = Window(c.driver)
+        c.open_url(url)
         window.set_size()
-        return window.find_list(url, page_src)
+        res = window.find_list(url, page_src)
+        c.quit()
+        return res
 
 
 if __name__ == '__main__':
-    for r in Window.run("https://guba.eastmoney.com/default,1_1.html"):
-        print(r)
-    # Window.run("https://stock.cngold.org/gundong/")
+    # Window.run("https://guba.eastmoney.com/default,1_1.html")
+    Window.run("https://stock.cngold.org/gundong/")
     # Window.run("https://www.chaoqi.net/dujiabaodao/")
     # Window.run("http://finance.camase.com/c4.aspx")
     # Window.run("http://www.zichanjie.com/zhuanlan/zepinghongguan")

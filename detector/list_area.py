@@ -1,7 +1,7 @@
 import lxml.html as lh
 import requests
 from lxml import etree
-from my_html import *
+from detector.my_html import *
 
 headers = {
     'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36'
@@ -22,6 +22,7 @@ class LinkItem:
         elif self.link is not None:
             self.rel_xpath = ListArea.get_relative_path(_item, self.link)
         self.tag = _item.tag
+        self.loc = None
 
     def valid(self):
         return self.link is not None
@@ -151,15 +152,8 @@ class ListArea:
                     lis.append(list_area)
         return _res, lis
 
-    def find_static_path(self, url, page_src=None):
-        if page_src is None:
-            r = requests.get(url)
-            r.encoding = r.apparent_encoding
-            _document = lh.fromstring(r.text)
-        else:
-            _document = lh.fromstring(page_src)
-
-        target = find_node2(self.list_node, _document)
+    def find_static_path(self, _document):
+        target = find_node(self.list_node, _document)
         path_set = set()
         for t in target:
             path_set.add(etree.ElementTree(_document).getpath(t))

@@ -97,16 +97,18 @@ def is_same_node(node1, node2):
 
 
 def find_node(node, doc):
+    res = []
     for child in doc.iter():
         if is_same_node(node, child):
-            return child
+            res.append(child)
+    return res
 
 
 def find_node2(node, doc):
     node_path = get_node_path(node)
     node_lis = [n for n in get_depth_in_tree(doc, len(node_path) - 1) if
                 is_same_tag(n, node) and get_node_path(n) == node_path]
-    node_lis = [n for n in node_lis if is_same_node(n, node)]
+    node_lis = [n for n in node_lis if is_same_node(node, n)]
     return node_lis
 
 
