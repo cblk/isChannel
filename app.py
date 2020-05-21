@@ -10,10 +10,18 @@ def hello_world():
     return 'Hello World!'
 
 
+@app.route('/data', methods=['POST'])
+def data():
+    f = request.files['data']
+
+    return f.filename
+
+
 @app.route('/list', methods=['POST'])
 def find_list():
-    url = request.json.get('url', None)
-    page_src = request.json.get('page_src', None)
+    f = request.files['data']
+    url = request.form.get("url")
+    page_src = f.read()
     data = []
     if url is None:
         return {'code': 1, 'msg': 'url is None', 'data': data}

@@ -163,4 +163,5 @@ class ListArea:
 if __name__ == '__main__':
     r = requests.get('https://guba.eastmoney.com/default,1_1.html', headers=headers)
     r.encoding = r.apparent_encoding
-    document = lh.fromstring(r.text)
+    with open('1.html', 'w') as f:
+        f.write(r.text)
