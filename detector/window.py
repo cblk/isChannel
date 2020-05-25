@@ -4,6 +4,21 @@ import lxml.html as lh
 import requests
 
 
+def print_all_list(link_area, _document):
+    """
+    找到静态页面中列表的xpath，并组装成规则
+    :param link_area:
+    :param _document:
+    :return:
+    """
+    path_list = link_area.find_static_path(_document)
+    rel_xpath = link_area.items[0].rel_xpath
+    res = set()
+    for list_path in path_list:
+        res.add(list_path + rel_xpath)
+    return list(res)
+
+
 class Window:
     def __init__(self, driver):
         # 浏览器大小
@@ -146,7 +161,8 @@ class Window:
 
         for list_path, link_area_list in res:
             for link_area in link_area_list:
-                path_list = self.print_all_list(link_area, _document)
+                path_list = print_all_list(link_area, _document)
+                # 过滤重复的规则
                 for p in path_list:
                     if p not in res_set:
                         li.append(p)
@@ -187,14 +203,6 @@ class Window:
             print("title: {}\nurl:   {}\nsize: {}\nloc:   {}\nxpath: {}\n".
                   format(item.content, item.link.get('href'), self.size(item.xpath),
                          self.location(item.xpath), item.rel_xpath))
-
-    def print_all_list(self, link_area, _document):
-        path_list = link_area.find_static_path(_document)
-        rel_xpath = link_area.items[0].rel_xpath
-        res = set()
-        for list_path in path_list:
-            res.add(list_path + rel_xpath)
-        return list(res)
 
     def is_vertical(self, items):
         """

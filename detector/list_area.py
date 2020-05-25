@@ -153,7 +153,13 @@ class ListArea:
         return _res, lis
 
     def find_static_path(self, _document):
+        """
+        根据列表在动态页面的位置，查找到其对应的静态页面的位置
+        :param _document:
+        :return:
+        """
         target = find_node(self.list_node, _document)
+        # 去重
         path_set = set()
         for t in target:
             path_set.add(etree.ElementTree(_document).getpath(t))

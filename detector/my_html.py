@@ -66,6 +66,12 @@ def is_same_tag(node1, node2):
 
 
 def is_same(node1, node2):
+    """
+    简单判断节点是否相同
+    :param node1: 动态加载页面中的节点
+    :param node2: 静态加载页面中的节点
+    :return:
+    """
     attr1 = node1.attrib
     attr2 = node2.attrib
     for key in attr2:
@@ -76,6 +82,11 @@ def is_same(node1, node2):
 
 
 def scan_node(node):
+    """
+    统计一个节点的直接子节点的html标签情况
+    :param node:
+    :return:
+    """
     res = {}
     for child in node.getchildren():
         key = str(child.tag)
@@ -84,6 +95,12 @@ def scan_node(node):
 
 
 def is_same_node(node1, node2):
+    """
+    判断两个节点是否相同
+    :param node1: 动态加载页面中的节点
+    :param node2: 静态加载页面中的节点
+    :return: 两个节点是否为同一节点
+    """
     if not is_same(node1, node2):
         return False
     res1 = scan_node(node1)
@@ -97,6 +114,12 @@ def is_same_node(node1, node2):
 
 
 def find_node(node, doc):
+    """
+    循环整个dom tree的节点，判断节点是否相同
+    :param node:
+    :param doc:
+    :return:
+    """
     res = []
     for child in doc.iter():
         if is_same_node(node, child):
