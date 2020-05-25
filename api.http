@@ -1,20 +1,4 @@
-# curl -v -F key1=value1 -F upload=@localfilename URL
-POST URL
-Content-Type: multipart/form-data; boundary=WebAppBoundary
-
---WebAppBoundary
-Content-Disposition: form-data; name="key1"
-
-value1
---WebAppBoundary
-Content-Disposition: form-data; name="upload"; filename="localfilename"
-
-< localfilename
---WebAppBoundary--
-
-###
-
-## get
+### Get
 GET https://guba.eastmoney.com/default,1_1.html
 
 > {%
@@ -22,9 +6,12 @@ GET https://guba.eastmoney.com/default,1_1.html
     client.log(typeof response.body)
 %}
 
+### hello
+GET {{host}}
+
 ### List
-# curl -v -F url=https://guba.eastmoney.com/default,1_1.html -F data=@1.html http://127.0.0.1:8080/list
-POST http://127.0.0.1:8080/list
+# curl -v -F url=https://guba.eastmoney.com/default,1_1.html -F data=@1.html http://list.yuanben.org/list
+POST {{host}}/list
 Content-Type: multipart/form-data; boundary=WebAppBoundary
 
 --WebAppBoundary

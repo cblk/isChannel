@@ -246,7 +246,7 @@ class Window:
 
 if __name__ == '__main__':
     # Window.run("https://guba.eastmoney.com/default,1_1.html")
-    Window.run("https://stock.cngold.org/gundong/")
+    # Window.run("https://stock.cngold.org/gundong/")
     # Window.run("https://www.chaoqi.net/dujiabaodao/")
     # Window.run("http://finance.camase.com/c4.aspx")
     # Window.run("http://www.zichanjie.com/zhuanlan/zepinghongguan")
@@ -254,7 +254,7 @@ if __name__ == '__main__':
     # Window.run("http://www.jyb.cn/rmtsy1240/zt/sxxy/")
     # Window.run("http://mrdx.cn/content/20200320/Page16DK.htm")
     # Window.run("http://mrdx.cn/content/20200320/Page01DK.htm")
-    # Window.run("http://digitalpaper.stdaily.com/http_www.kjrb.com/kjrb/html/2020-03/12/node_4.htm")
+    Window.run("http://digitalpaper.stdaily.com/http_www.kjrb.com/kjrb/html/2020-03/12/node_4.htm")
     # Window.run("http://paper.ce.cn/jjrb/html/2020-03/16/node_2.htm")
     # Window.run("https://epaper.gmw.cn/gmrb/html/2020-03/16/nbs.D110000gmrb_01.htm")
     # Window.run("http://www.81.cn/jfjbmap/content/2020-03/12/node_3.htm")
